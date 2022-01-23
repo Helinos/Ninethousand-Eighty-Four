@@ -1,0 +1,7 @@
+/target
+.env
+main.db
+main.db-shm
+main.db-wal
+9084.exe
+rustfmt.toml
