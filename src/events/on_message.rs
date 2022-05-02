@@ -15,17 +15,18 @@ use crate::{
 };
 
 pub struct FauxMessage {
-    content: String,
+    pub content: String,
     pub author: User,
-    id: MessageId,
+    pub id: MessageId,
     pub channel_id: ChannelId,
     pub guild_id: u64,
 }
 
+// When a message is sent
 pub async fn message(ctx: Context, msg: Message) {
     let guild_id = match msg.guild_id {
         Some(id) => id.0,
-        None => return,
+        None => return, // If the message was sent in a DM don't do anything
     };
 
     check(
@@ -41,6 +42,7 @@ pub async fn message(ctx: Context, msg: Message) {
     .await;
 }
 
+// When a message is edited
 pub async fn message_update(ctx: Context, old: Option<Message>, new: Option<Message>, event: MessageUpdateEvent) {
     let msg: FauxMessage;
 
@@ -48,7 +50,7 @@ pub async fn message_update(ctx: Context, old: Option<Message>, new: Option<Mess
         msg = FauxMessage {
             guild_id: match &m.guild_id {
                 Some(id) => id.0,
-                None => return,
+                None => return, // If the message was sent in a DM don't do anything
             },
             content: m.content,
             author: m.author,
@@ -101,7 +103,7 @@ async fn check(ctx: Context, msg: &FauxMessage) {
 
     // If the server isn't using the global dataset, then salt the message with the salt along with the guild's and the channel's id
     let hash: u128;
-    if database.retrieve_bool("guild_settings", "global", "id", &msg.guild_id).await {
+    if database.retrieve_bool("guild_settings", "global", "id", &guild_id).await {
         // Global dataset enabled
         hash = misc::hash(&msg.content);
    } else {
@@ -123,7 +125,7 @@ async fn check(ctx: Context, msg: &FauxMessage) {
     
     if whitelisted && infringing{
         delete_message(&ctx, msg).await;
-        mute(&ctx, msg, guild_id).await;
+        mute(&ctx, msg).await;
     }
 }
 

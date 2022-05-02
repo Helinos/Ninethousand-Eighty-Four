@@ -16,21 +16,15 @@ use serenity::{
 
 use crate::{events::on_message::FauxMessage, Database};
 
-use super::misc::seconds_to_string;
+use super::misc::{seconds_to_string, check_msg, to_string};
 
 const DEFAULT_COLOR: Color = Color::from_rgb(149, 165, 166);
 const ERROR_COLOR: Color = Color::from_rgb(231, 76, 60);
 const SETTINGS_COLOR: Color = Color::from_rgb(13, 71, 161);
 
 
-
-// Checks that a message was successfully sent; if not, then logs why to stdout.
-fn check_msg(result: SerenityResult<Message>) {
-    if let Err(why) = result {
-        println!("Error sending message: {:?}", why);
-    }
-}
-
+// Sends a message and deletes it after a certian amount of time
+// As well as logs to stdout if there's any error in sending
 async fn temp_msg(ctx: &Context, duration: u64, result: SerenityResult<Message>) {
     match result {
         Ok(msg) => {
@@ -44,6 +38,16 @@ async fn temp_msg(ctx: &Context, duration: u64, result: SerenityResult<Message>)
     }
 }
 
+// Get the prefix for use with commands
+async fn get_prefix(ctx: &Context, msg: &Message) -> String {
+    let data = ctx.data.read().await;
+    let database = data.get::<Database>().expect("Expected Database in TypeMap");
+    
+    match msg.guild_id {
+        Some(gid) => return database.retrieve_str("guild_settings", "prefix", "id", &gid.0).await,
+        None => return to_string("9!"),
+    }
+}
 
 
 // =====================
@@ -89,7 +93,11 @@ pub async fn help(ctx: &Context, msg: &Message) {
         e.description("System
         - **Help** Show this message.
         - **Ping** Pong!
-        - **Settings** Change how the bot behaves in this server.");
+        - **Settings** Change how the bot behaves in this server.
+        
+        Moderation
+        - **Stunlock** Manually stunlock a user.
+        - **Streak** Modify a user's streak.");
         e
     })).await);
 }
@@ -201,14 +209,41 @@ pub async fn stunlock(ctx: &Context, msg: &FauxMessage, duration: u64, streak: u
               streak,
             ));
             e.thumbnail("https://i.imgur.com/IEZKNZE.png");
-            e.field("\u{200B}", "[Why did I get stunlocked?](https://github.com/DontStarve72)", true);
+            e.field("\u{200B}", "[Why did I get stunlocked?](https://github.com/DontStarve72/Ninethousand-Eighty-Four#why-was-i-muted)", true);
             e
         });
         m
     }).await).await;
 }
 
+pub async fn manual_mute(ctx: &Context, msg: &Message, offender: &User) {
+    check_msg(msg.channel_id.send_message(ctx, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.color(DEFAULT_COLOR);
+            e.description(format!("Manually stunlocked <@{}>.",
+              offender.id.0,
+            ));
+            e
+        });
+        m
+    }).await);
+}
 
+pub async fn manual_streak(ctx: &Context, msg: &Message, offender_id: &u64, streak: &u64) {
+    check_msg(msg.channel_id.send_message(ctx, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.color(DEFAULT_COLOR);
+            e.description(format!("Set the streak of the user <@{}> to `{}`",
+              offender_id,
+              streak,
+            ));
+            e
+        });
+        m
+    }).await);
+}
 
 // ========================
 // 
@@ -227,6 +262,56 @@ pub async fn unmute(ctx: &Context, user: &User, guild_id: &u64) {
               Some(name) => e.description(format!("**Your stunlock in** `{}` **has ended**.", name)),
               None => e.description("Your stunlock has ended."),
             };
+            e
+        });
+        m
+    }).await);
+}
+
+
+
+// =======================
+// 
+//     ERORR MESSAGES
+// 
+// =======================
+
+
+
+pub async fn no_user (ctx: &Context, msg: &Message) {
+    let prefix = get_prefix(ctx, msg).await;
+
+    check_msg(msg.channel_id.send_message(ctx, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.color(ERROR_COLOR);
+            e.description(format!("You must specify a user. See `{}help` for examples.", prefix));
+            e
+        });
+        m
+    }).await);
+}
+
+pub async fn no_int (ctx: &Context, msg: &Message) {
+    let prefix = get_prefix(ctx, msg).await;
+    
+    check_msg(msg.channel_id.send_message(ctx, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.color(ERROR_COLOR);
+            e.description(format!("You must specify a number. See `{}help` for examples.", prefix));
+            e
+        });
+        m
+    }).await);
+}
+
+pub async fn streak_bad_size (ctx: &Context, msg: &Message) {
+    check_msg(msg.channel_id.send_message(ctx, |m| {
+        m.reference_message(msg);
+        m.embed(|e| {
+            e.color(ERROR_COLOR);
+            e.description("Specified streak must be `at least 0` or `below 16`.");
             e
         });
         m

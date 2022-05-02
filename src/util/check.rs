@@ -62,16 +62,6 @@ pub struct MuteInfo {
 }
 
 impl MuteInfo {
-    pub async fn new_mute(ctx: &Context, msg: &FauxMessage) -> Self {
-        let mut a = Self {
-            streak: 0,
-            streak_time: 0,
-            mute_until: 0,
-        };
-        a.mute(ctx, msg).await;
-        a
-    } 
-
     async fn update(&mut self, ctx: &Context, guild_id: &u64, author_id: &u64) {
         let data = ctx.data.read().await;
         let database = data.get::<Database>().expect("Expected Database in TypeMap");
@@ -129,6 +119,16 @@ impl MuteInfo {
             }
         }
     }
+    
+    // When the mutee is not in the database
+    pub async fn new_mute() -> Self {
+        let a = Self {
+            streak: 0,
+            streak_time: 0,
+            mute_until: 0,
+        };
+        a
+    } 
 
     async fn mute(&mut self, ctx: &Context, msg: &FauxMessage) {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
@@ -179,27 +179,30 @@ impl MuteInfo {
     } 
 }
 
-pub async fn mute(ctx: &Context, msg: &FauxMessage, guild_id: u64) {
+// Only the author, channel_id, and guild_id fields from FauxMessage are needed to run this function
+// I'm not happy with the way this looks now, but I feel like passing 2 extra fields would just make it look worse
+pub async fn mute(ctx: &Context, msg: &FauxMessage) {
     let data = ctx.data.read().await;
     let mute_arc = data.get::<MuteCache>().expect("Expected MuteCache in TypeMap");
     let mut mute_cache = mute_arc.write().await;
     let author_id = msg.author.id.0;
 
-    if let Some(guild_data) = mute_cache.get_mut(&guild_id) {
+    if let Some(guild_data) = mute_cache.get_mut(&msg.guild_id) {
         // Data present for the guild
         if let Some(author_data) = guild_data.get_mut(&author_id) {
             // Data present for the user
             author_data.mute(ctx, msg).await;
         } else {
             // No data present for the user
-            let author_data = MuteInfo::new_mute(ctx, msg).await;
+            let mut author_data = MuteInfo::new_mute().await;
+            author_data.mute(ctx, msg).await;
             guild_data.insert(author_id, author_data);
         }
     } else {
         // No data present for the guild or user
         let mut guild_data = HashMap::new();
-        let author_data = MuteInfo::new_mute(ctx, msg).await;
+        let author_data = MuteInfo::new_mute().await;
         guild_data.insert(author_id, author_data);
-        mute_cache.insert(guild_id, guild_data);
+        mute_cache.insert(msg.guild_id, guild_data);
     }
 }

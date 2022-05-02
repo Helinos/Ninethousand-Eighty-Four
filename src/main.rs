@@ -2,9 +2,28 @@ mod util;
 mod commands;
 mod events;
 
-use commands::{meta::*, settings::*};
+use commands::{
+    meta::*,
+    settings::*,
+    mute::*,
+    set_streak::*,
+};
 
-use std::{sync::{Arc, atomic::{AtomicBool, Ordering}}, collections::{HashSet, HashMap}, env, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{
+            AtomicBool,
+            Ordering
+        }
+    },
+    collections::{
+        HashSet,
+        HashMap
+    },
+    env,
+    time::Duration
+};
 
 use serenity::{
     async_trait,
@@ -44,7 +63,7 @@ use crate::util::{
 
 #[group]
 #[commands(
-    ping, settings, help
+    ping, settings, help, mute_command, set_streak
 )]
 struct General;
 
