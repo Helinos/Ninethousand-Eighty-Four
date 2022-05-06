@@ -17,4 +17,4 @@ The user's streak will decay by 1 every 6 hours until it is back to 0.
 ## Why was I muted?
 (For those who are not knowers)
 
-I recommend reading above, but to state briefly, this bot compares messages that get said in guilds against a list of every other message that's been said prior. If the bot decides a message is similar enough to a message that has been sent in the past, or in other words, if the message is unoriginal, then it deletes the message and mutes the user for increasingly long durations.
+The 9084 bot compares the messages you send in specific channels against a database of every other message that it has logged. If the bot decides that a message you've sent is similar enough to a message that anyone else has sent prior (meaning the message is "unoriginal"), it delete the message and will mute you for increasingly long durations. See [this article](https://blog.xkcd.com/2008/01/14/robot9000-and-xkcd-signal-attacking-noise-in-chat/) for the philosophy behind this system.
