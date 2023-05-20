@@ -7,7 +7,6 @@ use std::fmt::Display;
 
 use lazy_static::lazy_static;
 use regex::Regex;
-use fasthash::city;
 
 // Checks that a message was successfully sent; if not, then logs why to stdout.
 pub fn check_msg(result: SerenityResult<Message>) {
@@ -27,7 +26,7 @@ pub fn hash(content: &str) -> u128{
     let content = content.to_lowercase();
     let content = RE.replace_all(&content, "").to_string();
     
-    city::hash128(content)
+    cityhash_rs::cityhash_110_128(content.as_bytes())
 }
 
 pub fn seconds_to_string(secs: u64) -> String {

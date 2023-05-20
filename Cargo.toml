@@ -9,7 +9,7 @@ tracing = "0.1.29"
 tracing-subscriber = "0.2.25"
 regex = "1.5.4"
 lazy_static = "1.4.0"
-fasthash = "0.4"
+cityhash-rs = "1.0.1"
 
 [dependencies.serenity]
 default-features = false
